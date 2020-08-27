@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <style>
+      .morpheme {
+        color: #212529;
+      }
+
+      .morpheme:hover {
+        color: #c30;
+      }
+    </style>
+
+    <title>대본 분석기</title>
+  </head>
+  <body class="bg-light">
+    {% block content %}
+
+    {% endblock %}
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    var csrftoken = getCookie('csrftoken');
+
+    function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    function makeResult(script, morphemeArray) {
+
+      function makeMorphemeHtml(morphemeObj){
+
+        return '<a href="#" class="morpheme" data-toggle="tooltip" title="" data-original-title="'+morphemeObj[2]+'('+morphemeObj[1]+')'+'">'+morphemeObj[0]+'</a>'
+      }
+
+      var scriptArray = script.split(' ');
+
+      var morphemeGroup = morphemeArray[0][0]
+      var morphemeArrayIndex = 0;
+
+      var result = makeMorphemeHtml(morphemeArray[0])
+
+      var replaceNotFullKorean = /[ㄱ-ㅎㅏ-ㅣ]/gi;
+
+      function makeWordByMorpheme(word){
+        console.log('@@function makeWordByMorpheme--'+'word:'+word+' morphemeGroup:'+morphemeGroup)
+        if (word != morphemeGroup){
+          console.log('if word != morphemeGroup')
+          morphemeArrayIndex = morphemeArrayIndex + 1;
+
+          // 마지막 형태소인지 검사
+          if (morphemeArray[morphemeArrayIndex] != undefined) {
+            console.log('if morphemeArray[morphemeArrayIndex] != undefined')
+
+            if (word.indexOf(morphemeArray[morphemeArrayIndex][0]) != -1) {
+              console.log('if word.indexOf(morphemeArray[morphemeArrayIndex][0]) != -1')
+              // 문장 끝나는지 검사 위해 morphemeGroup 생성
+              morphemeGroup = morphemeGroup + morphemeArray[morphemeArrayIndex][0];
+              result = result + makeMorphemeHtml(morphemeArray[morphemeArrayIndex])
+
+            }else{
+              console.log('if word.indexOf(morphemeArray[morphemeArrayIndex][0]) == -1')
+              morphemeGroup = '';
+              result = result + makeMorphemeHtml(morphemeArray[morphemeArrayIndex]) + ' '
+
+            }
+            makeWordByMorpheme(word)
+          }
+
+
+        }else{
+          console.log('word == morphemeGroup')
+          result = result + ' ';
+
+          morphemeArrayIndex = morphemeArrayIndex + 1;
+
+          // 마지막 형태소인지 검사
+          if (morphemeArray[morphemeArrayIndex] != undefined) {
+            console.log('morphemeArray[morphemeArrayIndex] != undefined')
+            morphemeGroup = morphemeArray[morphemeArrayIndex][0];
+
+            result = result + makeMorphemeHtml(morphemeArray[morphemeArrayIndex])
+          }
+
+        }
+      }
+
+
+
+
+      for(var i=0; i < scriptArray.length; i++) {
+        var word = scriptArray[i];
+        makeWordByMorpheme(word)
+      }
+
+      $('#contents').html('<div class="card"><h5 class="card-header">분석결과</h5><div class="card-body"><p class="card-text" id="result-text" style="word-break: keep-all;">'+result+'</p></div></div>');
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+      })
+    }
+
+    $(document).on('click', '#post-button',function(e){
+      var script = $('#script').val();
+      $('#contents').html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">분석중...</span></div></div>');
+      $.ajax({
+          type:'POST',
+          url:'{% url "get_result" %}',
+          data:{
+              script: script,
+              action: 'post'
+          },
+          success:function(morphemeArray){
+            console.log(morphemeArray)
+            makeResult(script, JSON.parse(morphemeArray))
+          },
+          error : function(xhr,errmsg,err) {
+          console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+      }
+      });
+    });
+
+
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip()
+    })
+    </script>
+  </body>
+</html>

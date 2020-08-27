@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+  <div class="py-5 text-center">
+    <img class="d-block mx-auto mb-4" src="https://www.pngitem.com/pimgs/m/80-804249_orange-tabby-cat-face-hd-png-download.png" alt="" width="72" height="72">
+    <h2>대본 분석기</h2>
+    <p class="lead">분석할 대본을 넣어주세요</p>
+  </div>
+  <div class="row">
+    <div class="col-md-12" id="contents">
+          <div class="form-group">
+            <textarea class="form-control" id="script" name="script" rows="20"></textarea>
+          </div>
+          <button type="submit" id="post-button" class="btn btn-primary btn-lg btn-block mt-md">분석하기</button>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
